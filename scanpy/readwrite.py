@@ -430,7 +430,9 @@ def read_visium(
 
     if load_images:
         tissue_positions_file = (
-            path / "spatial/tissue_positions.csv"
+            "spatial/tissue_positions.parquet" # 10x Visium HD
+            if (path / "spatial/tissue_positions.parquet").exists()
+            else path / "spatial/tissue_positions.csv"
             if (path / "spatial/tissue_positions.csv").exists()
             else path / "spatial/tissue_positions_list.csv"
         )
@@ -473,18 +475,21 @@ def read_visium(
         }
 
         # read coordinates
-        positions = pd.read_csv(
-            files["tissue_positions_file"],
-            header=0 if tissue_positions_file.name == "tissue_positions.csv" else None,
-            index_col=0,
-        )
-        positions.columns = [
-            "in_tissue",
-            "array_row",
-            "array_col",
-            "pxl_col_in_fullres",
-            "pxl_row_in_fullres",
-        ]
+        if tissue_positions_file.endswith(".csv"):
+            positions = pd.read_csv(
+                files["tissue_positions_file"],
+                header=0 if tissue_positions_file.name == "tissue_positions.csv" else None,
+                index_col=0,
+            )
+            positions.columns = [
+                "in_tissue",
+                "array_row",
+                "array_col",
+                "pxl_col_in_fullres",
+                "pxl_row_in_fullres",
+            ]
+        else:
+            positions = pd.read_parquet(files["tissue_positions_file"])
 
         adata.obs = adata.obs.join(positions, how="left")
 
